@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debt Killer — วางแผนปิดหนี้</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #00e5a0;
+    --accent2: #ff4d6d;
+    --accent3: #ffd166;
+    --text: #e8e8f0;
+    --muted: #6b6b85;
+    --card-r: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.4;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; position: relative; z-index: 1; }
+
+  /* Header */
+  header { text-align: center; padding: 3rem 0 2.5rem; }
+  .logo-line {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 6px 18px; border-radius: 99px;
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+  .logo-line::before { content: '●'; font-size: 8px; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 700; letter-spacing: -1px; line-height: 1.1;
+    margin-bottom: 0.75rem;
+  }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 15px; }
+
+  /* Disclaimer */
+  .disclaimer {
+    background: #1a1510; border: 1px solid #3a2f10;
+    border-radius: 8px; padding: 10px 16px;
+    font-size: 12px; color: #8a7a50;
+    margin: 1.5rem 0; text-align: center;
+  }
+
+  /* Section */
+  .section { margin-bottom: 2rem; }
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Debt card */
+  .debts-list { display: flex; flex-direction: column; gap: 10px; }
+  .debt-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--card-r); padding: 1rem 1.25rem;
+    display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 12px; align-items: end;
+    animation: slideIn 0.25s ease;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+  .debt-card:hover { border-color: #3a3a50; }
+
+  .field label {
+    display: block; font-size: 11px; color: var(--muted);
+    margin-bottom: 5px; letter-spacing: 0.5px;
+  }
+  .field input {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: 'Sarabun', sans-serif;
+    font-size: 14px; padding: 8px 12px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .field input::placeholder { color: var(--muted); }
+
+  .btn-remove {
+    background: none; border: 1px solid #3a2030;
+    color: var(--accent2); border-radius: 8px;
+    padding: 8px 14px; cursor: pointer; font-size: 16px;
+    transition: all 0.2s; align-self: end;
+  }
+  .btn-remove:hover { background: #2a1020; }
+
+  /* Buttons */
+  .btn-add {
+    width: 100%; background: none; border: 1px dashed var(--border);
+    color: var(--muted); border-radius: var(--card-r);
+    padding: 14px; cursor: pointer; font-family: 'Sarabun', sans-serif;
+    font-size: 14px; transition: all 0.2s; margin-top: 8px;
+  }
+  .btn-add:hover { border-color: var(--accent); color: var(--accent); background: #0a1a14; }
+
+  /* Method selector */
+  .method-row { display: flex; gap: 10px; }
+  .method-btn {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--card-r); padding: 1rem; cursor: pointer;
+    text-align: left; transition: all 0.2s; color: var(--text);
+    font-family: 'Sarabun', sans-serif;
+  }
+  .method-btn:hover { border-color: var(--accent); }
+  .method-btn.active { border-color: var(--accent); background: #0a1a14; }
+  .method-btn .method-name {
+    font-family: 'Space Mono', monospace; font-size: 13px;
+    color: var(--accent); margin-bottom: 4px;
+  }
+  .method-btn .method-desc { font-size: 12px; color: var(--muted); }
+
+  /* Extra payment */
+  .extra-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--card-r); padding: 1rem 1.25rem;
+  }
+  .extra-row label { font-size: 14px; flex: 1; }
+  .extra-row input {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: 'Sarabun', sans-serif;
+    font-size: 14px; padding: 8px 12px; outline: none; width: 150px;
+    transition: border-color 0.2s;
+  }
+  .extra-row input:focus { border-color: var(--accent); }
+
+  /* Calculate button */
+  .btn-calc {
+    width: 100%; background: var(--accent); color: #000;
+    border: none; border-radius: var(--card-r); padding: 16px;
+    font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700;
+    letter-spacing: 1px; cursor: pointer; transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .btn-calc:hover { background: #00ffb3; transform: translateY(-1px); }
+  .btn-calc:active { transform: translateY(0); }
+
+  /* Results */
+  #results { display: none; animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--card-r); padding: 1.25rem;
+    text-align: center;
+  }
+  .stat-card .stat-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.5px; }
+  .stat-card .stat-value {
+    font-family: 'Space Mono', monospace; font-size: 1.5rem;
+    font-weight: 700; color: var(--accent);
+  }
+  .stat-card.danger .stat-value { color: var(--accent2); }
+  .stat-card.warn .stat-value { color: var(--accent3); }
+
+  /* Insight box */
+  .insight {
+    background: #0a1a14; border: 1px solid #1a3a2a;
+    border-left: 3px solid var(--accent);
+    border-radius: var(--card-r); padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem; font-size: 14px; line-height: 1.7;
+  }
+  .insight strong { color: var(--accent); }
+
+  /* Timeline */
+  .timeline-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--card-r); padding: 1.25rem;
+    margin-bottom: 1.5rem; overflow-x: auto;
+  }
+  .timeline-title {
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    color: var(--muted); margin-bottom: 1rem; letter-spacing: 1px;
+  }
+  .chart-area { position: relative; height: 180px; }
+  canvas#timelineChart { width: 100% !important; }
+
+  /* Debt order list */
+  .order-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem; }
+  .order-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .order-num {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px; color: var(--muted);
+    white-space: nowrap;
+  }
+  .order-name { flex: 1; font-size: 14px; }
+  .order-finish { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .order-badge {
+    font-size: 11px; padding: 3px 10px; border-radius: 99px;
+    white-space: nowrap;
+  }
+  .badge-first { background: #0a2a1a; color: var(--accent); border: 1px solid #1a4a2a; }
+  .badge-mid   { background: #1a1a10; color: var(--accent3); border: 1px solid #3a3a20; }
+  .badge-last  { background: #1a0a10; color: var(--accent2); border: 1px solid #3a1a20; }
+
+  /* Affiliate banner */
+  .affiliate {
+    background: linear-gradient(135deg, #0a1520 0%, #0f2030 100%);
+    border: 1px solid #1a3050;
+    border-radius: var(--card-r); padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .affiliate-label {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: #4a6080; margin-bottom: 8px;
+  }
+  .affiliate h3 { font-size: 16px; color: #a0c8f0; margin-bottom: 6px; }
+  .affiliate p { font-size: 13px; color: #6a8aaa; margin-bottom: 1rem; line-height: 1.6; }
+  .affiliate-saving {
+    font-family: 'Space Mono', monospace; font-size: 1.2rem;
+    color: #60b0ff; margin-bottom: 1rem;
+  }
+  .btn-affiliate {
+    display: inline-block; background: #1a4080; color: #a0c8f0;
+    border: 1px solid #2a5090; border-radius: 8px;
+    padding: 10px 20px; font-size: 13px; cursor: pointer;
+    text-decoration: none; transition: all 0.2s;
+  }
+  .btn-affiliate:hover { background: #2a5090; color: #d0e8ff; }
+  .affiliate-note { font-size: 11px; color: #3a5070; margin-top: 8px; }
+
+  /* Share / screenshot */
+  .share-row { display: flex; gap: 10px; }
+  .btn-share {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: var(--card-r); padding: 12px;
+    font-family: 'Sarabun', sans-serif; font-size: 14px; cursor: pointer;
+    transition: all 0.2s; text-align: center;
+  }
+  .btn-share:hover { border-color: var(--accent); color: var(--accent); background: #0a1a14; }
+
+  /* Footer */
+  footer {
+    text-align: center; padding: 2rem 0; color: var(--muted);
+    font-size: 12px; border-top: 1px solid var(--border); margin-top: 2rem;
+  }
+
+  @media (max-width: 600px) {
+    .debt-card { grid-template-columns: 1fr 1fr; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .method-row { flex-direction: column; }
+    .share-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo-line">DEBT KILLER</div>
+    <h1>ปิดหนี้ให้เร็วที่สุด<br><span>ด้วยแผนที่ใช่</span></h1>
+    <p class="sub">คำนวณ Snowball & Avalanche — เห็นภาพรวมหนี้ทุกก้อนใน 1 นาที</p>
+  </header>
+
+  <div class="disclaimer">
+    ⚠️ เครื่องมือนี้ใช้เพื่อการวางแผนส่วนตัวเท่านั้น ไม่ถือเป็นคำแนะนำทางการเงินหรือกฎหมาย
+    กรุณาปรึกษาผู้เชี่ยวชาญก่อนตัดสินใจทางการเงิน
+  </div>
+
+  <!-- STEP 1: debts -->
+  <div class="section">
+    <div class="section-label">01 — กรอกหนี้ทั้งหมด</div>
+    <div class="debts-list" id="debtsList"></div>
+    <button class="btn-add" onclick="addDebt()">+ เพิ่มหนี้รายการใหม่</button>
+  </div>
+
+  <!-- STEP 2: method -->
+  <div class="section">
+    <div class="section-label">02 — เลือกวิธีปิดหนี้</div>
+    <div class="method-row">
+      <button class="method-btn active" id="btnSnowball" onclick="setMethod('snowball')">
+        <div class="method-name">❄️ Snowball</div>
+        <div class="method-desc">ปิดหนี้ก้อนเล็กก่อน — รู้สึก win เร็ว มีแรงฮึด</div>
+      </button>
+      <button class="method-btn" id="btnAvalanche" onclick="setMethod('avalanche')">
+        <div class="method-name">🏔️ Avalanche</div>
+        <div class="method-desc">ปิดดอกเบี้ยสูงสุดก่อน — ประหยัดเงินได้มากที่สุด</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 3: extra -->
+  <div class="section">
+    <div class="section-label">03 — เงินเพิ่มต่อเดือน (ถ้ามี)</div>
+    <div class="extra-row">
+      <label>นอกจากจ่ายขั้นต่ำแล้ว มีเงินเพิ่มที่จะใส่ปิดหนี้ได้เดือนละ</label>
+      <input type="number" id="extraPayment" placeholder="0" min="0">
+      <span style="color:var(--muted);font-size:13px">บาท</span>
+    </div>
+  </div>
+
+  <button class="btn-calc" onclick="calculate()">⚡ คำนวณแผนปิดหนี้</button>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <br>
+    <div class="section-label">📊 ผลการคำนวณ</div>
+
+    <div class="stats-grid">
+      <div class="stat-card danger">
+        <div class="stat-label">หนี้รวมทั้งหมด</div>
+        <div class="stat-value" id="statTotal">—</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-label">ดอกเบี้ยรวมที่จะจ่าย</div>
+        <div class="stat-value" id="statInterest">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">ปิดหนี้หมดภายใน</div>
+        <div class="stat-value" id="statMonths">—</div>
+      </div>
+    </div>
+
+    <div class="insight" id="insightBox"></div>
+
+    <!-- Order list -->
+    <div class="section-label">ลำดับการปิดหนี้</div>
+    <div class="order-list" id="orderList"></div>
+
+    <!-- Timeline chart -->
+    <div class="timeline-wrap">
+      <div class="timeline-title">BALANCE OVER TIME (บาท)</div>
+      <div class="chart-area">
+        <canvas id="timelineChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Affiliate -->
+    <div class="affiliate" id="affiliateBox"></div>
+
+    <!-- Share -->
+    <div class="section-label">แชร์แผนของคุณ</div>
+    <div class="share-row">
+      <button class="btn-share" onclick="copyResult()">📋 คัดลอกสรุป</button>
+      <button class="btn-share" onclick="shareToLine()">💚 แชร์ Line</button>
+      <button class="btn-share" onclick="window.print()">🖨️ พิมพ์ / Screenshot</button>
+    </div>
+  </div>
+
+  <footer>
+    Debt Killer — เครื่องมือวางแผนปิดหนี้ฟรี | ข้อมูลทั้งหมดเก็บในเบราว์เซอร์ของคุณ ไม่มีการส่งข้อมูลออกไปภายนอก
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+let method = 'snowball';
+let chartInst = null;
+
+// ─── Initial debts ───
+const defaults = [
+  { name: 'บัตรเครดิต KBank', balance: 45000, rate: 16, min: 1350 },
+  { name: 'สินเชื่อ บ.ร.จ.', balance: 120000, rate: 24, min: 3600 },
+];
+
+window.onload = () => {
+  defaults.forEach(d => addDebt(d));
+};
+
+let debtId = 0;
+function addDebt(data = {}) {
+  const id = debtId++;
+  const el = document.createElement('div');
+  el.className = 'debt-card';
+  el.id = 'debt-' + id;
+  el.innerHTML = `
+    <div class="field">
+      <label>ชื่อหนี้</label>
+      <input type="text" placeholder="เช่น บัตรเครดิต SCB" value="${data.name||''}">
+    </div>
+    <div class="field">
+      <label>ยอดคงเหลือ (บาท)</label>
+      <input type="number" placeholder="50000" min="0" value="${data.balance||''}">
+    </div>
+    <div class="field">
+      <label>ดอกเบี้ย (%/ปี)</label>
+      <input type="number" placeholder="20" step="0.1" min="0" max="100" value="${data.rate||''}">
+    </div>
+    <div class="field">
+      <label>จ่ายขั้นต่ำ/เดือน (บาท)</label>
+      <input type="number" placeholder="1500" min="0" value="${data.min||''}">
+    </div>
+    <button class="btn-remove" onclick="removeDebt(${id})" title="ลบ">✕</button>
+  `;
+  document.getElementById('debtsList').appendChild(el);
+}
+
+function removeDebt(id) {
+  const el = document.getElementById('debt-' + id);
+  if (el) el.remove();
+}
+
+function setMethod(m) {
+  method = m;
+  document.getElementById('btnSnowball').classList.toggle('active', m === 'snowball');
+  document.getElementById('btnAvalanche').classList.toggle('active', m === 'avalanche');
+}
+
+function getDebts() {
+  return [...document.querySelectorAll('.debt-card')].map(card => {
+    const inputs = card.querySelectorAll('input');
+    return {
+      name: inputs[0].value || 'หนี้ไม่ระบุชื่อ',
+      balance: parseFloat(inputs[1].value) || 0,
+      rate: parseFloat(inputs[2].value) || 0,
+      min: parseFloat(inputs[3].value) || 0,
+    };
+  }).filter(d => d.balance > 0);
+}
+
+function fmt(n) {
+  return n.toLocaleString('th-TH', { maximumFractionDigits: 0 });
+}
+
+function calculate() {
+  const debts = getDebts();
+  if (!debts.length) { alert('กรุณากรอกข้อมูลหนี้อย่างน้อย 1 รายการ'); return; }
+
+  const extra = parseFloat(document.getElementById('extraPayment').value) || 0;
+  const totalBalance = debts.reduce((s, d) => s + d.balance, 0);
+  const totalMin = debts.reduce((s, d) => s + d.min, 0);
+
+  // Sort by method
+  let sorted = [...debts].map((d, i) => ({ ...d, idx: i }));
+  if (method === 'snowball') sorted.sort((a, b) => a.balance - b.balance);
+  else sorted.sort((a, b) => b.rate - a.rate);
+
+  // Simulate payoff
+  let balances = sorted.map(d => d.balance);
+  let totalInterestPaid = 0;
+  let months = 0;
+  const historyTotal = [totalBalance];
+  const finishMonths = new Array(sorted.length).fill(null);
+  const monthlyBudget = totalMin + extra;
+
+  while (balances.some(b => b > 0) && months < 600) {
+    months++;
+    let budgetLeft = monthlyBudget;
+
+    // Apply interest & minimum payments
+    for (let i = 0; i < balances.length; i++) {
+      if (balances[i] <= 0) continue;
+      const interest = balances[i] * (sorted[i].rate / 100 / 12);
+      totalInterestPaid += interest;
+      balances[i] += interest;
+      const pay = Math.min(sorted[i].min, balances[i]);
+      balances[i] -= pay;
+      budgetLeft -= sorted[i].min;
+      if (balances[i] < 0) balances[i] = 0;
+      if (balances[i] === 0 && finishMonths[i] === null) finishMonths[i] = months;
+    }
+
+    // Apply extra to first unpaid debt
+    for (let i = 0; i < balances.length; i++) {
+      if (balances[i] > 0 && budgetLeft > 0) {
+        const pay = Math.min(budgetLeft, balances[i]);
+        balances[i] -= pay;
+        budgetLeft -= pay;
+        if (balances[i] === 0 && finishMonths[i] === null) finishMonths[i] = months;
+        break;
+      }
+    }
+
+    const remaining = balances.reduce((s, b) => s + b, 0);
+    historyTotal.push(Math.round(remaining));
+    if (remaining <= 0) break;
+  }
+
+  // Compare methods for insight
+  const altInterest = calcAltInterest(debts, extra, method === 'snowball' ? 'avalanche' : 'snowball');
+  const saving = Math.abs(altInterest - totalInterestPaid);
+
+  // ─── Render results ───
+  document.getElementById('statTotal').textContent = fmt(totalBalance) + ' บ.';
+  document.getElementById('statInterest').textContent = fmt(Math.round(totalInterestPaid)) + ' บ.';
+  document.getElementById('statMonths').textContent = months + ' เดือน';
+
+  const yrs = Math.floor(months / 12);
+  const mos = months % 12;
+  const timeStr = yrs > 0 ? `${yrs} ปี ${mos} เดือน` : `${mos} เดือน`;
+  const methodTH = method === 'snowball' ? 'Snowball (ก้อนเล็กก่อน)' : 'Avalanche (ดอกสูงก่อน)';
+  const altTH = method === 'snowball' ? 'Avalanche' : 'Snowball';
+
+  document.getElementById('insightBox').innerHTML = `
+    แผน <strong>${methodTH}</strong> ของคุณ: ปิดหนี้ทั้งหมด <strong>${fmt(totalBalance)} บาท</strong>
+    ใน <strong>${timeStr}</strong> โดยจ่ายดอกเบี้ยรวม <strong>${fmt(Math.round(totalInterestPaid))} บาท</strong><br><br>
+    เทียบกับ ${altTH}: ${saving > 0
+      ? `วิธีนี้<strong> ${saving > totalInterestPaid * 0.01 ? (method === 'avalanche' ? 'ประหยัดดอกเบี้ยได้ ' + fmt(Math.round(saving)) + ' บาท' : 'ได้ momentum เร็วกว่า ปิดก้อนแรกได้ใน ' + finishMonths[0] + ' เดือน') : 'ผลต่างน้อยมาก — ทั้งสองวิธีใกล้เคียงกัน'} </strong>`
+      : 'ผลลัพธ์ใกล้เคียงกัน'
+    }
+  `;
+
+  // Order list
+  const orderEl = document.getElementById('orderList');
+  orderEl.innerHTML = '';
+  sorted.forEach((d, i) => {
+    const fm = finishMonths[i] || months;
+    const badge = i === 0 ? '<span class="order-badge badge-first">ปิดก่อน</span>'
+                : i === sorted.length - 1 ? '<span class="order-badge badge-last">ปิดสุดท้าย</span>'
+                : '<span class="order-badge badge-mid">ระหว่างทาง</span>';
+    orderEl.innerHTML += `
+      <div class="order-item">
+        <span class="order-num">#${i+1}</span>
+        <span class="order-name">${d.name}</span>
+        <span style="font-size:12px;color:var(--muted)">${fmt(d.balance)} บ.</span>
+        <span class="order-finish">ปิดใน ${fm} เดือน</span>
+        ${badge}
+      </div>`;
+  });
+
+  // Chart
+  if (chartInst) chartInst.destroy();
+  const labels = historyTotal.map((_, i) => i === 0 ? 'ตอนนี้' : `ด.${i}`);
+  const step = Math.max(1, Math.floor(labels.length / 20));
+  const sparseLabels = labels.map((l, i) => i % step === 0 ? l : '');
+
+  chartInst = new Chart(document.getElementById('timelineChart'), {
+    type: 'line',
+    data: {
+      labels: sparseLabels,
+      datasets: [{
+        data: historyTotal,
+        borderColor: '#00e5a0',
+        backgroundColor: 'rgba(0,229,160,0.08)',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: true,
+        tension: 0.4,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => fmt(ctx.raw) + ' บาท' }
+      }},
+      scales: {
+        x: { ticks: { color: '#6b6b85', font: { size: 10 } }, grid: { color: '#1a1a24' } },
+        y: { ticks: { color: '#6b6b85', font: { size: 10 }, callback: v => fmt(v) }, grid: { color: '#1a1a24' } }
+      }
+    }
+  });
+
+  // Affiliate
+  const potentialSaving = Math.round(totalBalance * 0.05);
+  document.getElementById('affiliateBox').innerHTML = `
+    <div class="affiliate-label">💡 สนับสนุนโดยพาร์ทเนอร์</div>
+    <h3>รีไฟแนนซ์แล้วดอกเบี้ยอาจลดได้อีก</h3>
+    <p>หนี้รวม ${fmt(totalBalance)} บาทของคุณ ถ้ารีไฟแนนซ์ได้อัตรา 10%/ปี แทน ${Math.round(debts.reduce((s,d)=>s+d.rate,0)/debts.length)}%/ปี คุณอาจประหยัดได้</p>
+    <div class="affiliate-saving">~${fmt(potentialSaving)} บาท/ปี</div>
+    <a class="btn-affiliate" href="#" onclick="trackAffiliate(event)">ดูตัวเลือกรีไฟแนนซ์ →</a>
+    <div class="affiliate-note">* ตัวเลขเป็นการประมาณการเท่านั้น ขึ้นอยู่กับเงื่อนไขของแต่ละสถาบันการเงิน</div>
+  `;
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function calcAltInterest(debts, extra, altMethod) {
+  let sorted = [...debts];
+  if (altMethod === 'snowball') sorted.sort((a, b) => a.balance - b.balance);
+  else sorted.sort((a, b) => b.rate - a.rate);
+  let balances = sorted.map(d => d.balance);
+  let totalInterest = 0;
+  const totalMin = sorted.reduce((s, d) => s + d.min, 0);
+  const budget = totalMin + extra;
+  let m = 0;
+  while (balances.some(b => b > 0) && m < 600) {
+    m++;
+    let left = budget;
+    for (let i = 0; i < balances.length; i++) {
+      if (balances[i] <= 0) continue;
+      const int = balances[i] * (sorted[i].rate / 100 / 12);
+      totalInterest += int;
+      balances[i] += int;
+      const pay = Math.min(sorted[i].min, balances[i]);
+      balances[i] = Math.max(0, balances[i] - pay);
+      left -= sorted[i].min;
+    }
+    for (let i = 0; i < balances.length; i++) {
+      if (balances[i] > 0 && left > 0) {
+        const pay = Math.min(left, balances[i]);
+        balances[i] -= pay; left -= pay; break;
+      }
+    }
+  }
+  return totalInterest;
+}
+
+function trackAffiliate(e) {
+  e.preventDefault();
+  // placeholder — replace with real affiliate link
+  alert('🔗 ลิงก์พาร์ทเนอร์ (ใส่ affiliate link จริงที่นี่)');
+}
+
+function copyResult() {
+  const total = document.getElementById('statTotal').textContent;
+  const interest = document.getElementById('statInterest').textContent;
+  const months = document.getElementById('statMonths').textContent;
+  const text = `📊 แผนปิดหนี้จาก Debt Killer\n\nหนี้รวม: ${total}\nดอกเบี้ยรวม: ${interest}\nระยะเวลา: ${months}\n\nวางแผนปิดหนี้ฟรีได้ที่ → [your-url]`;
+  navigator.clipboard.writeText(text).then(() => alert('คัดลอกสำเร็จ!'));
+}
+
+function shareToLine() {
+  const total = document.getElementById('statTotal').textContent;
+  const months = document.getElementById('statMonths').textContent;
+  const text = encodeURIComponent(`📊 ฉันวางแผนปิดหนี้ ${total} ใน ${months} ด้วย Debt Killer → [your-url]`);
+  window.open(`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(window.location.href)}&text=${text}`);
+}
+</script>
+</body>
+</html>
